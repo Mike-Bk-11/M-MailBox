@@ -1,0 +1,142 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = "file:./dev.db"
+}
+
+model User {
+  id           String         @id @default(uuid())
+  email        String         @unique
+  passwordHash String
+  name         String
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime       @updatedAt
+  accounts     EmailAccount[]
+  filters      Filter[]
+  aiLogs       AILog[]
+  labels       Label[]
+  settings     UserSettings?
+}
+
+model UserSettings {
+  id                String  @id @default(uuid())
+  userId            String  @unique
+  user              User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  openaiApiKey      String?
+  aiAutoReply       Boolean @default(false)
+  aiSummarize       Boolean @default(true)
+  aiCategorize      Boolean @default(true)
+  aiSentiment       Boolean @default(true)
+  aiPriority        Boolean @default(true)
+  aiSpamDetect      Boolean @default(true)
+  autoReplyMaxPerDay Int    @default(10)
+  autoReplyRequireApproval Boolean @default(true)
+  theme             String  @default("light")
+  notifications     Boolean @default(true)
+}
+
+model EmailAccount {
+  id               String   @id @default(uuid())
+  userId           String
+  user             User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  provider         String   // gmail, outlook, imap
+  email            String
+  displayName      String?
+  accessToken      String?
+  refreshToken     String?
+  tokenExpiry      DateTime?
+  imapHost         String?
+  imapPort         Int?
+  smtpHost         String?
+  smtpPort         Int?
+  encryptedPassword String?
+  isActive         Boolean  @default(true)
+  color            String   @default("#3B82F6")
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+  emails           Email[]
+
+  @@unique([userId, email])
+}
+
+model Email {
+  id              String       @id @default(uuid())
+  accountId       String
+  account         EmailAccount @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  messageId       String?
+  threadId        String?
+  fromAddress     String
+  fromName        String?
+  toAddresses     String       // JSON array
+  ccAddresses     String?      // JSON array
+  bccAddresses    String?      // JSON array
+  subject         String?
+  bodyText        String?
+  bodyHtml        String?
+  snippet         String?
+  date            DateTime
+  isRead          Boolean      @default(false)
+  isStarred       Boolean      @default(false)
+  folder          String       @default("INBOX")
+  labels          String       @default("[]") // JSON array
+  hasAttachments  Boolean      @default(false)
+  aiCategory      String?
+  aiSentiment     String?
+  aiPriority      Int?
+  aiSummary       String?
+  isSpam          Boolean      @default(false)
+  createdAt       DateTime     @default(now())
+  attachments     Attachment[]
+
+  @@index([accountId, folder])
+  @@index([accountId, date])
+  @@index([messageId])
+}
+
+model Attachment {
+  id          String @id @default(uuid())
+  emailId     String
+  email       Email  @relation(fields: [emailId], references: [id], onDelete: Cascade)
+  filename    String
+  contentType String
+  size        Int
+  storagePath String?
+  contentId   String?
+}
+
+model Filter {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name      String
+  isActive  Boolean  @default(true)
+  conditions String  // JSON: { logic: "AND"|"OR", rules: [{ field, operator, value }] }
+  actions   String   // JSON: [{ type, value }]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model AILog {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  emailId   String?
+  action    String   // auto-reply, summarize, categorize, sentiment, priority, spam-detect
+  input     String?
+  output    String?
+  cost      Float?
+  createdAt DateTime @default(now())
+}
+
+model Label {
+  id     String @id @default(uuid())
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name   String
+  color  String @default("#6B7280")
+
+  @@unique([userId, name])
+}
