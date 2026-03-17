@@ -55,6 +55,7 @@ model EmailAccount {
   encryptedPassword String?
   isActive         Boolean  @default(true)
   color            String   @default("#3B82F6")
+  lastSyncedAt     DateTime?
   createdAt        DateTime @default(now())
   updatedAt        DateTime @updatedAt
   emails           Email[]

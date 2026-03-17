@@ -14,16 +14,16 @@ const PROVIDER_PRESETS: Record<string, { imapHost: string; imapPort: string; smt
     imapHost: 'imap.gmail.com', imapPort: '993',
     smtpHost: 'smtp.gmail.com', smtpPort: '587',
     color: '#EA4335',
-    label: 'Gmail / Google Workspace',
+    label: 'Gmail (App Password)',
     helpText: 'Use an App Password (not your regular password). Go to Google Account → Security → 2-Step Verification → App Passwords.',
     helpUrl: 'https://myaccount.google.com/apppasswords',
   },
-  outlook: {
+  outlookPersonal: {
     imapHost: 'outlook.office365.com', imapPort: '993',
     smtpHost: 'smtp.office365.com', smtpPort: '587',
     color: '#0078D4',
-    label: 'Outlook / Microsoft 365',
-    helpText: 'Use an App Password if 2FA is enabled. Go to Microsoft Account → Security → App Passwords.',
+    label: 'Outlook.com / Hotmail',
+    helpText: 'Personal Microsoft accounts require OAuth. Use the "Microsoft / Outlook" OAuth button above instead. If you have an organizational account, you may use an App Password here.',
     helpUrl: 'https://account.live.com/proofs/AppPassword',
   },
   yahoo: {
@@ -71,8 +71,12 @@ export default function Accounts() {
   const [saving, setSaving] = useState(false);
 
   const applyPreset = (key: string) => {
-    if (key === 'outlook') {
+    if (key === 'outlook-oauth') {
       handleConnectOutlook();
+      return;
+    }
+    if (key === 'gmail-oauth') {
+      handleConnectGoogle();
       return;
     }
     const preset = PROVIDER_PRESETS[key];
@@ -85,6 +89,15 @@ export default function Accounts() {
       smtpPort: preset.smtpPort,
       color: preset.color,
     }));
+  };
+
+  const handleConnectGoogle = async () => {
+    try {
+      const { data } = await api.get('/accounts/google/auth-url');
+      window.location.href = data.url;
+    } catch (err: any) {
+      toast.error(err.response?.data?.error || 'Failed to start Google OAuth');
+    }
   };
 
   const handleConnectOutlook = async () => {
@@ -153,19 +166,51 @@ export default function Accounts() {
             {!selectedPreset ? (
               <>
                 <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">
-                  Choose your email provider. Works with any email from any company or domain — Gmail, Outlook, Yahoo, Zoho, iCloud, or any IMAP provider.
+                  Choose your email provider. Sign in with OAuth (recommended) or connect via IMAP with an App Password.
                 </p>
+
+                {/* OAuth options */}
+                <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-2">Sign in with OAuth (recommended)</p>
+                <div className="grid grid-cols-2 gap-3 mb-4">
+                  <button
+                    onClick={() => applyPreset('gmail-oauth')}
+                    className="flex items-center gap-3 p-4 rounded-xl border-2 border-gray-200 dark:border-gray-700 hover:border-red-300 dark:hover:border-red-600 transition"
+                  >
+                    <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{ backgroundColor: '#EA433520' }}>
+                      <EnvelopeIcon className="w-5 h-5" style={{ color: '#EA4335' }} />
+                    </div>
+                    <div className="text-left">
+                      <span className="font-medium text-sm text-gray-900 dark:text-white">Google / Gmail</span>
+                      <p className="text-xs text-gray-500">OAuth sign-in</p>
+                    </div>
+                  </button>
+                  <button
+                    onClick={() => applyPreset('outlook-oauth')}
+                    className="flex items-center gap-3 p-4 rounded-xl border-2 border-gray-200 dark:border-gray-700 hover:border-blue-300 dark:hover:border-blue-600 transition"
+                  >
+                    <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{ backgroundColor: '#0078D420' }}>
+                      <EnvelopeIcon className="w-5 h-5" style={{ color: '#0078D4' }} />
+                    </div>
+                    <div className="text-left">
+                      <span className="font-medium text-sm text-gray-900 dark:text-white">Microsoft / Outlook</span>
+                      <p className="text-xs text-gray-500">OAuth sign-in</p>
+                    </div>
+                  </button>
+                </div>
+
+                {/* IMAP options */}
+                <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-2">Connect via IMAP (App Password)</p>
                 <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
                   {Object.entries(PROVIDER_PRESETS).map(([key, p]) => (
                     <button
                       key={key}
                       onClick={() => applyPreset(key)}
-                      className="flex flex-col items-center gap-2 p-5 rounded-xl border-2 border-gray-200 dark:border-gray-700 hover:border-blue-300 dark:hover:border-blue-600 transition"
+                      className="flex flex-col items-center gap-2 p-4 rounded-xl border-2 border-gray-200 dark:border-gray-700 hover:border-blue-300 dark:hover:border-blue-600 transition"
                     >
                       <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{ backgroundColor: p.color + '20' }}>
                         <EnvelopeIcon className="w-5 h-5" style={{ color: p.color }} />
                       </div>
-                      <span className="font-medium text-sm text-gray-900 dark:text-white">{p.label}</span>
+                      <span className="font-medium text-sm text-gray-900 dark:text-white text-center">{p.label}</span>
                     </button>
                   ))}
                 </div>

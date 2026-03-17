@@ -211,7 +211,7 @@ export async function syncOutlookAccount(accountId: string, limit?: number) {
         const box = await openBox(imap, imapFolder);
         if (box.messages.total === 0) continue;
 
-        const fetchCount = limit || 500;
+        const fetchCount = limit || box.messages.total;
         const start = Math.max(1, box.messages.total - (fetchCount - 1));
         const range = `${start}:${box.messages.total}`;
         const emails = await fetchMessages(imap, range);

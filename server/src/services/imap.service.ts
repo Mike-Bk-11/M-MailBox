@@ -70,7 +70,7 @@ export class ImapService {
     });
   }
 
-  async fetchEmails(folder: string = 'INBOX', limit: number = 500, since?: Date): Promise<NormalizedEmail[]> {
+  async fetchEmails(folder: string = 'INBOX', limit?: number, since?: Date): Promise<NormalizedEmail[]> {
     const imap = await this.connect();
 
     return new Promise((resolve, reject) => {
@@ -83,7 +83,7 @@ export class ImapService {
           if (err) { imap.end(); return reject(err); }
           if (!results.length) { imap.end(); return resolve([]); }
 
-          const recent = results.slice(-limit);
+          const recent = limit ? results.slice(-limit) : results;
           const emails: NormalizedEmail[] = [];
 
           const fetch = imap.fetch(recent, {
@@ -231,7 +231,7 @@ export async function syncAccountEmails(accountId: string, limit?: number) {
       imapHost: account.imapHost,
       imapPort: account.imapPort!,
     });
-    emails = await svc.fetchEmails('INBOX', limit || 500);
+    emails = await svc.fetchEmails('INBOX', limit);
   }
   // Gmail and Outlook handled by their respective services
 

@@ -32,20 +32,28 @@ router.post('/sync/:accountId', authMiddleware, async (req: AuthRequest, res: Re
     });
     if (!account) return res.status(404).json({ error: 'Account not found' });
 
+    // First sync: fetch up to 5000; subsequent syncs: 500
+    const limit = account.lastSyncedAt ? 500 : 5000;
+
     switch (account.provider) {
       case 'gmail':
         const { syncGmailAccount: syncGmail } = await import('../services/gmail.service');
-        await syncGmail(account.id);
+        await syncGmail(account.id, limit);
         break;
       case 'outlook':
         const { syncOutlookAccount: syncOutlook } = await import('../services/outlook.service');
-        await syncOutlook(account.id);
+        await syncOutlook(account.id, limit);
         break;
       case 'imap':
         const { syncAccountEmails: syncImap } = await import('../services/imap.service');
-        await syncImap(account.id);
+        await syncImap(account.id, limit);
         break;
     }
+
+    await prisma.emailAccount.update({
+      where: { id: account.id },
+      data: { lastSyncedAt: new Date() },
+    });
 
     return res.json({ message: `Synced ${account.email}` });
   } catch (error) {

@@ -25,7 +25,7 @@ export class GmailService {
     this.accountId = accountId;
   }
 
-  async fetchEmails(folder: string = 'INBOX', limit: number = 500): Promise<NormalizedEmail[]> {
+  async fetchEmails(folder: string = 'INBOX', limit?: number): Promise<NormalizedEmail[]> {
     const labelMap: Record<string, string> = {
       'INBOX': 'INBOX',
       'SENT': 'SENT',
@@ -38,13 +38,14 @@ export class GmailService {
 
     let messages: Array<{ id?: string | null; threadId?: string | null }> = [];
     let pageToken: string | undefined;
-    const batchSize = Math.min(limit, 500);
+    const maxFetch = limit || Number.MAX_SAFE_INTEGER;
+    const batchSize = 500;
 
-    while (messages.length < limit) {
+    while (messages.length < maxFetch) {
       const listRes = await this.gmail.users.messages.list({
         userId: 'me',
         labelIds,
-        maxResults: Math.min(batchSize, limit - messages.length),
+        maxResults: Math.min(batchSize, maxFetch - messages.length),
         pageToken,
       });
 
@@ -183,7 +184,7 @@ export async function syncGmailAccount(accountId: string, limit?: number) {
   const svc = new GmailService(account.accessToken, account.refreshToken, accountId);
 
   for (const folder of ['INBOX', 'SENT', 'DRAFTS']) {
-    const emails = await svc.fetchEmails(folder, limit || 500);
+    const emails = await svc.fetchEmails(folder, limit);
 
     for (const email of emails) {
       const exists = await prisma.email.findFirst({
