@@ -209,12 +209,27 @@ export default function Filters() {
             <h1 className="text-2xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
               <FunnelIcon className="w-6 h-6" /> Email Filters
             </h1>
-            <button
-              onClick={() => { setEditFilter({ ...emptyFilter }); setShowForm(true); }}
-              className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-sm font-medium transition"
-            >
-              <PlusIcon className="w-4 h-4" /> New Filter
-            </button>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={async () => {
+                  try {
+                    const { data } = await api.post('/emails/apply-filters');
+                    toast.success(`Filters applied to ${data.applied} of ${data.total} emails`);
+                  } catch {
+                    toast.error('Failed to apply filters');
+                  }
+                }}
+                className="flex items-center gap-2 px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-xl text-sm font-medium transition"
+              >
+                <FunnelIcon className="w-4 h-4" /> Apply to Existing
+              </button>
+              <button
+                onClick={() => { setEditFilter({ ...emptyFilter }); setShowForm(true); }}
+                className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-sm font-medium transition"
+              >
+                <PlusIcon className="w-4 h-4" /> New Filter
+              </button>
+            </div>
           </div>
 
           {/* Filter Form */}

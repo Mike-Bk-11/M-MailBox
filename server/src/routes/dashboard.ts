@@ -7,7 +7,7 @@ const router = Router();
 // --- Overview stats ---
 router.get('/stats', authMiddleware, async (req: AuthRequest, res: Response) => {
   try {
-    const { days = '30' } = req.query;
+    const { days = '30', accountId } = req.query;
     const since = new Date();
     since.setDate(since.getDate() - parseInt(days as string));
 
@@ -16,7 +16,9 @@ router.get('/stats', authMiddleware, async (req: AuthRequest, res: Response) => 
       select: { id: true, email: true, displayName: true, provider: true, color: true },
     });
 
-    const accountIds = accounts.map(a => a.id);
+    const accountIds = accountId
+      ? [accountId as string].filter(id => accounts.some(a => a.id === id))
+      : accounts.map(a => a.id);
 
     // Total counts
     const [totalEmails, unreadCount, starredCount, spamCount] = await Promise.all([
@@ -109,7 +111,7 @@ router.get('/stats', authMiddleware, async (req: AuthRequest, res: Response) => 
 // --- Emails per day chart data ---
 router.get('/emails-over-time', authMiddleware, async (req: AuthRequest, res: Response) => {
   try {
-    const { days = '30' } = req.query;
+    const { days = '30', accountId } = req.query;
     const since = new Date();
     since.setDate(since.getDate() - parseInt(days as string));
 
@@ -117,7 +119,9 @@ router.get('/emails-over-time', authMiddleware, async (req: AuthRequest, res: Re
       where: { userId: req.userId },
       select: { id: true },
     });
-    const accountIds = accounts.map(a => a.id);
+    const accountIds = accountId
+      ? [accountId as string].filter(id => accounts.some(a => a.id === id))
+      : accounts.map(a => a.id);
 
     const emails = await prisma.email.findMany({
       where: { accountId: { in: accountIds }, date: { gte: since } },
@@ -148,12 +152,15 @@ router.get('/emails-over-time', authMiddleware, async (req: AuthRequest, res: Re
 // --- Response time analytics ---
 router.get('/response-time', authMiddleware, async (req: AuthRequest, res: Response) => {
   try {
+    const { accountId } = req.query;
     const accounts = await prisma.emailAccount.findMany({
       where: { userId: req.userId },
       select: { id: true, email: true },
     });
     const accountEmails = accounts.map(a => a.email);
-    const accountIds = accounts.map(a => a.id);
+    const accountIds = accountId
+      ? [accountId as string].filter(id => accounts.some(a => a.id === id))
+      : accounts.map(a => a.id);
 
     // Get sent emails and match replies
     const sentEmails = await prisma.email.findMany({

@@ -177,6 +177,23 @@ export default function EmailView({ onReply, onForward }: EmailViewProps) {
             </div>
           )}
 
+          {/* Labels */}
+          {(() => {
+            try {
+              const labels: string[] = JSON.parse(email.labels || '[]');
+              if (labels.length === 0) return null;
+              return (
+                <div className="flex flex-wrap gap-2 mb-4">
+                  {labels.map((label) => (
+                    <span key={label} className="inline-flex items-center gap-1 text-xs px-2 py-1 rounded-full bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400">
+                      <TagIcon className="w-3 h-3" /> {label}
+                    </span>
+                  ))}
+                </div>
+              );
+            } catch { return null; }
+          })()}
+
           {/* AI Summary */}
           {(aiSummary || email.aiSummary) && (
             <div className="mb-4 p-3 bg-blue-50 dark:bg-blue-900/20 rounded-xl border border-blue-200 dark:border-blue-800">

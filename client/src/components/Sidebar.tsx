@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useMailStore } from '../stores/mailStore';
+import api from '../lib/api';
 import {
   InboxIcon,
   PaperAirplaneIcon,
@@ -37,10 +38,17 @@ const folders = [
 export default function Sidebar({ onCompose, onNavigate, currentPage }: SidebarProps) {
   const { accounts, currentFolder, setCurrentFolder, setSelectedAccount, selectedAccountId, fetchAccounts, syncEmails, syncAccount, isSyncing } = useMailStore();
   const [expandedAccounts, setExpandedAccounts] = useState(true);
+  const [customFolders, setCustomFolders] = useState<string[]>([]);
 
   useEffect(() => {
     fetchAccounts();
   }, [fetchAccounts]);
+
+  useEffect(() => {
+    const params: Record<string, string> = {};
+    if (selectedAccountId) params.accountId = selectedAccountId;
+    api.get('/emails/folders', { params }).then(res => setCustomFolders(res.data)).catch(() => {});
+  }, [selectedAccountId]);
 
   const handleFolderClick = (folderId: string) => {
     if (folderId === 'STARRED') {
@@ -90,6 +98,22 @@ export default function Sidebar({ onCompose, onNavigate, currentPage }: SidebarP
             >
               <Icon className="w-5 h-5" />
               {name}
+            </button>
+          ))}
+
+          {/* Custom Folders */}
+          {customFolders.map((folder) => (
+            <button
+              key={folder}
+              onClick={() => handleFolderClick(folder)}
+              className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition ${
+                currentFolder === folder && currentPage === 'mail'
+                  ? 'bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400'
+                  : 'text-gray-700 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-800'
+              }`}
+            >
+              <FolderIcon className="w-5 h-5" />
+              {folder}
             </button>
           ))}
         </div>
@@ -191,7 +215,7 @@ export default function Sidebar({ onCompose, onNavigate, currentPage }: SidebarP
       {/* Sync Button */}
       <div className="p-3 border-t border-gray-200 dark:border-gray-700">
         <button
-          onClick={syncEmails}
+          onClick={() => syncEmails()}
           disabled={isSyncing}
           className="w-full flex items-center justify-center gap-2 py-2 text-sm text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white transition"
         >

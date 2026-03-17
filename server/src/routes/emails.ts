@@ -123,6 +123,33 @@ router.get('/', authMiddleware, async (req: AuthRequest, res: Response) => {
   }
 });
 
+// --- Get custom folders ---
+router.get('/folders', authMiddleware, async (req: AuthRequest, res: Response) => {
+  try {
+    const { accountId } = req.query;
+    const accounts = await prisma.emailAccount.findMany({
+      where: { userId: req.userId },
+      select: { id: true },
+    });
+    const accountIds = accountId
+      ? [accountId as string].filter(id => accounts.some(a => a.id === id))
+      : accounts.map(a => a.id);
+
+    const results = await prisma.email.findMany({
+      where: { accountId: { in: accountIds } },
+      select: { folder: true },
+      distinct: ['folder'],
+    });
+
+    const systemFolders = ['INBOX', 'SENT', 'DRAFTS', 'STARRED', 'SPAM', 'TRASH'];
+    const customFolders = results.map(r => r.folder).filter(f => !systemFolders.includes(f));
+
+    return res.json(customFolders);
+  } catch (error) {
+    return res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
 // --- Get single email ---
 router.get('/:id', authMiddleware, async (req: AuthRequest, res: Response) => {
   try {
@@ -358,6 +385,34 @@ router.delete('/drafts/:id', authMiddleware, async (req: AuthRequest, res: Respo
     return res.json({ message: 'Draft deleted' });
   } catch (error) {
     return res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// --- Apply filters to existing emails ---
+router.post('/apply-filters', authMiddleware, async (req: AuthRequest, res: Response) => {
+  try {
+    const { applyFiltersToEmail } = await import('../services/filter.service');
+
+    const accounts = await prisma.emailAccount.findMany({
+      where: { userId: req.userId },
+      select: { id: true },
+    });
+    const accountIds = accounts.map(a => a.id);
+
+    const emails = await prisma.email.findMany({
+      where: { accountId: { in: accountIds }, folder: 'INBOX' },
+    });
+
+    let applied = 0;
+    for (const email of emails) {
+      const actions = await applyFiltersToEmail(email, req.userId!);
+      if (actions.length > 0) applied++;
+    }
+
+    return res.json({ message: `Filters applied to ${applied} emails`, applied, total: emails.length });
+  } catch (error) {
+    console.error('Apply filters error:', error);
+    return res.status(500).json({ error: 'Failed to apply filters' });
   }
 });
 

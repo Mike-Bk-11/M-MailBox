@@ -199,6 +199,8 @@ export async function syncOutlookAccount(accountId: string, limit?: number) {
   const account = await prisma.emailAccount.findUnique({ where: { id: accountId } });
   if (!account || account.provider !== 'outlook') return;
 
+  const { applyFiltersToEmail } = await import('./filter.service');
+
   const accessToken = await getValidToken(accountId);
   const imap = await connectImapXOAuth2(account.email, accessToken);
 
@@ -220,7 +222,7 @@ export async function syncOutlookAccount(accountId: string, limit?: number) {
           });
           if (exists) continue;
 
-          await prisma.email.create({
+          const created = await prisma.email.create({
             data: {
               accountId,
               messageId: email.messageId,
@@ -246,6 +248,12 @@ export async function syncOutlookAccount(accountId: string, limit?: number) {
               },
             },
           });
+
+          try {
+            await applyFiltersToEmail(created, account.userId);
+          } catch (e) {
+            console.error('Filter apply error:', e);
+          }
         }
       } catch (folderErr) {
         console.error(`Outlook sync folder ${folder} error:`, folderErr);

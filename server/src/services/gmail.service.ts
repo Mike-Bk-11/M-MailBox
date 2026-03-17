@@ -178,6 +178,8 @@ export async function syncGmailAccount(accountId: string, limit?: number) {
   const account = await prisma.emailAccount.findUnique({ where: { id: accountId } });
   if (!account || account.provider !== 'gmail' || !account.accessToken) return;
 
+  const { applyFiltersToEmail } = await import('./filter.service');
+
   const svc = new GmailService(account.accessToken, account.refreshToken, accountId);
 
   for (const folder of ['INBOX', 'SENT', 'DRAFTS']) {
@@ -189,7 +191,7 @@ export async function syncGmailAccount(accountId: string, limit?: number) {
       });
       if (exists) continue;
 
-      await prisma.email.create({
+      const created = await prisma.email.create({
         data: {
           accountId,
           messageId: email.messageId,
@@ -215,6 +217,12 @@ export async function syncGmailAccount(accountId: string, limit?: number) {
           },
         },
       });
+
+      try {
+        await applyFiltersToEmail(created, account.userId);
+      } catch (e) {
+        console.error('Filter apply error:', e);
+      }
     }
   }
 }

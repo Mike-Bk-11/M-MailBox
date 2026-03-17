@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import api from '../lib/api';
+import { useMailStore } from '../stores/mailStore';
 import {
   LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
   PieChart, Pie, Cell,
@@ -34,16 +35,20 @@ export default function Dashboard() {
   const [emailsOverTime, setEmailsOverTime] = useState<Array<{ date: string; received: number; sent: number }>>([]);
   const [responseTime, setResponseTime] = useState<{ avgResponseTimeHours: number; totalReplies: number } | null>(null);
   const [days, setDays] = useState('30');
+  const [accountId, setAccountId] = useState('');
   const [loading, setLoading] = useState(true);
+  const { accounts } = useMailStore();
 
   useEffect(() => {
     async function load() {
       setLoading(true);
       try {
+        const params: Record<string, string> = { days };
+        if (accountId) params.accountId = accountId;
         const [statsRes, timeRes, rtRes] = await Promise.all([
-          api.get('/dashboard/stats', { params: { days } }),
-          api.get('/dashboard/emails-over-time', { params: { days } }),
-          api.get('/dashboard/response-time'),
+          api.get('/dashboard/stats', { params }),
+          api.get('/dashboard/emails-over-time', { params }),
+          api.get('/dashboard/response-time', { params: accountId ? { accountId } : {} }),
         ]);
         setStats(statsRes.data);
         setEmailsOverTime(timeRes.data);
@@ -54,7 +59,7 @@ export default function Dashboard() {
       setLoading(false);
     }
     load();
-  }, [days]);
+  }, [days, accountId]);
 
   if (loading) {
     return (
@@ -71,16 +76,28 @@ export default function Dashboard() {
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Dashboard</h1>
-        <select
-          value={days}
-          onChange={(e) => setDays(e.target.value)}
-          className="px-3 py-2 text-sm rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
-        >
-          <option value="7">Last 7 days</option>
-          <option value="14">Last 14 days</option>
-          <option value="30">Last 30 days</option>
-          <option value="90">Last 90 days</option>
-        </select>
+        <div className="flex items-center gap-3">
+          <select
+            value={accountId}
+            onChange={(e) => setAccountId(e.target.value)}
+            className="px-3 py-2 text-sm rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
+          >
+            <option value="">All Accounts</option>
+            {accounts.map((a) => (
+              <option key={a.id} value={a.id}>{a.email}</option>
+            ))}
+          </select>
+          <select
+            value={days}
+            onChange={(e) => setDays(e.target.value)}
+            className="px-3 py-2 text-sm rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
+          >
+            <option value="7">Last 7 days</option>
+            <option value="14">Last 14 days</option>
+            <option value="30">Last 30 days</option>
+            <option value="90">Last 90 days</option>
+          </select>
+        </div>
       </div>
 
       {/* Stats Cards */}

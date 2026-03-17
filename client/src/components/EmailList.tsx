@@ -224,6 +224,16 @@ export default function EmailList() {
 
               {/* AI Badges */}
               <div className="flex items-center gap-1 shrink-0">
+                {(() => {
+                  try {
+                    const labels: string[] = JSON.parse(email.labels || '[]');
+                    return labels.map((label) => (
+                      <span key={label} className="text-[10px] px-1.5 py-0.5 rounded-full bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400">
+                        {label}
+                      </span>
+                    ));
+                  } catch { return null; }
+                })()}
                 {email.aiCategory && (
                   <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400">
                     {email.aiCategory}

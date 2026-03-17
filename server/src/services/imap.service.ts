@@ -220,6 +220,8 @@ export async function syncAccountEmails(accountId: string, limit?: number) {
   const account = await prisma.emailAccount.findUnique({ where: { id: accountId } });
   if (!account || !account.isActive) return;
 
+  const { applyFiltersToEmail } = await import('./filter.service');
+
   let emails: NormalizedEmail[] = [];
 
   if (account.provider === 'imap' && account.imapHost && account.encryptedPassword) {
@@ -239,7 +241,7 @@ export async function syncAccountEmails(accountId: string, limit?: number) {
     });
     if (exists) continue;
 
-    await prisma.email.create({
+    const created = await prisma.email.create({
       data: {
         accountId,
         messageId: email.messageId,
@@ -265,5 +267,11 @@ export async function syncAccountEmails(accountId: string, limit?: number) {
         },
       },
     });
+
+    try {
+      await applyFiltersToEmail(created, account.userId);
+    } catch (e) {
+      console.error('Filter apply error:', e);
+    }
   }
 }
